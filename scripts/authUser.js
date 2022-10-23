@@ -11,6 +11,7 @@ mutation SignInMutation($input: signInInput!) {
           expiredAt
         }
       }
+      otpSessionChallenge
       errors {
         message
       }
@@ -40,10 +41,11 @@ async function runSignIn(email, password) {
     const saltedpass = await saltPassword(email, password)
     const data = await graphQLClient.request(signIn, {
         input: {
-            email: email,
-            password: saltedpass
+            otpSessionChallenge: "1f7aa494d7369066bbfa4edcf4590317",
+            otpAttempt: "734089"
         },
     });
+    console.log(data)
     return data.signIn.currentUser
 }
 

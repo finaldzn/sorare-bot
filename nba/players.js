@@ -1,5 +1,3 @@
-const { GraphQLClient } = require("graphql-request");
-const runSignIn = require("./scripts/authUser");
 const { getNBAPlayersFromTeamSlug } = require("./scripts/constant_query");
 
 const { initGraphQLCLient, sendGRAPHQLRequest } = require("./utils");
@@ -10,9 +8,6 @@ const { initClient, insertPlayerIntoDB } = require("./database");
 const MY_EMAIL = "mouradianvictor@gmail.com";
 const MY_PASS = "Redsox46Mm!!";
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 async function returnCleanData(data) {
   const clean = data.nbaTeam;
@@ -56,7 +51,6 @@ async function getPlayersFromTeam(nba_client, teamslug) {
 const MAX_LIMIT = 1;
 
 async function getAllPlayersFromAllTeams(client) {
-  let limit = 0;
   const teams = fs.readFileSync("../TEAM_SLUGS.txt", "utf8");
   const teams_slugs = teams.split("\n");
   const [nba_client, slug] = await initGraphQLCLient(
@@ -85,12 +79,4 @@ async function getAllPlayersFromAllTeams(client) {
   }
 }
 
-
-async function main() {
-  const client = initClient("postgres://postgres:mysecretpassword@localhost:5432/postgres?sslmode=disable");
-  //await getAllPlayersFromAllTeams(client);
-  //const user = await runSignIn(MY_EMAIL, MY_PASS)
-  //console.log(user)
-}
-
-main();
+module.exports = getAllPlayersFromAllTeams;

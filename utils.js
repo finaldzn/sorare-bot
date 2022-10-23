@@ -63,7 +63,7 @@ async function initGraphQLCLient(
   //const user = await runSignIn(email, pass);
   const graphQLClient = new GraphQLClient(endpoint, {
     headers: {
-     // Authorization: `Bearer ${user.jwtToken.token}`,
+     Authorization: `Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI3NzgxMGI1My0yZjgwLTQ3OTEtOWMzYy00OTBhNWU0MjcxMDMiLCJzY3AiOiJ1c2VyIiwiYXVkIjoidG90d3NvcmFyZSIsImlhdCI6MTY2NjU0NzAyOSwiZXhwIjoiMTY2OTEzOTAyOSIsImp0aSI6IjNlODFkMmU4LWQ4ZDMtNDIxNy04OTIzLWY3NjQyN2U0ZDlmNSJ9.MyvMSFb3l1PiUv2ECYDdfd3Ze_D4Cb_Fu-Jec8N2JUY`,
       "JWT-AUD": `totwsorare`,
     },
   });

@@ -10,11 +10,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@sorare/actioncable": "^1.0.3",
     "axios": "^0.27.2",
     "bcrypt": "^5.0.1",
     "csv-parser": "^3.0.0",
     "csv-writer": "^1.6.0",
+    "dayjs": "^1.11.6",
     "fs": "^0.0.1-security",
-    "graphql-request": "^5.0.0"
+    "graphql-request": "^5.0.0",
+    "pg": "^8.8.0"
   }
 }
