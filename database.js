@@ -28,6 +28,8 @@ function createTable(client) {
             name VARCHAR(255),
             lastBid FLOAT,
             lastBidInUSD FLOAT,
+            rarity VARCHAR(255),
+            open BOOLEAN,
             startDate timestamp,
             endDate timestamp,
             bidsCount INT,
@@ -52,7 +54,7 @@ async function insertCard(client, card) {
   };
   if (!(await doesCardExist(client, card.slug))) {
     client.query(
-      `INSERT INTO cards (slug, name, lastBid, lastBidInUSD, startDate, endDate, bidsCount, player) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      `INSERT INTO cards (slug, name, lastBid, lastBidInUSD, startDate, endDate, bidsCount, player, open, rarity) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
         card.slug,
         card.name,
@@ -62,6 +64,8 @@ async function insertCard(client, card) {
         card.latestEnglishAuction.endDate,
         card.latestEnglishAuction.bidsCount,
         getPlayerSlugFromCardSlug(card.slug),
+        card.open,
+        card.rarity,
       ]
     ).catch((err) => {
       console.error(err);
@@ -73,9 +77,10 @@ async function updateOrCreateCard(client, card) {
   const getPlayerSlugFromCardSlug = (slug) => {
     return slug.split("-").slice(0, -3).join("-");
   };
+  console.log("updating a card");
   if (await doesCardExist(client, card.slug)) {
     client.query(
-      `UPDATE cards SET lastBid = $1, lastBidInUSD = $2, startDate = $3, endDate = $4, bidsCount = $5, player = $6, updatedat=$7 WHERE slug = $8`,
+      `UPDATE cards SET lastBid = $1, lastBidInUSD = $2, startDate = $3, endDate = $4, bidsCount = $5, player = $6, updatedat=$7, open=$8, rarity=$9 WHERE slug = $10`,
       [
         card.latestEnglishAuction.bestBid.amount,
         card.latestEnglishAuction.bestBid.amountInFiat.usd,
@@ -83,7 +88,9 @@ async function updateOrCreateCard(client, card) {
         card.latestEnglishAuction.endDate,
         card.latestEnglishAuction.bidsCount,
         getPlayerSlugFromCardSlug(card.slug),
-        new Date().toISOString(),
+        new Date(Date.now()).toISOString().replace('T',' ').replace('Z',''),
+        card.open,
+        card.rarity,
         card.slug,
       ]
     ).catch((err) => {
@@ -91,7 +98,7 @@ async function updateOrCreateCard(client, card) {
     });
   } else {
       client.query(
-        `INSERT INTO cards (slug, name, lastBid, lastBidInUSD, startDate, endDate, bidsCount, player) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        `INSERT INTO cards (slug, name, lastBid, lastBidInUSD, startDate, endDate, bidsCount, player, open, rarity) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
         [
           card.slug,
           card.name,
@@ -101,6 +108,8 @@ async function updateOrCreateCard(client, card) {
           card.latestEnglishAuction.endDate,
           card.latestEnglishAuction.bidsCount,
           getPlayerSlugFromCardSlug(card.slug),
+          card.open,
+          card.rarity
         ]
       ).catch((err) => {
         console.log("CAHUGHJTR ERROR")

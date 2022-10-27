@@ -1,13 +1,12 @@
-const { getNBAPlayersFromTeamSlug } = require("./scripts/constant_query");
+const { getNBAPlayersFromTeamSlug } = require("../scripts/constant_query");
 
-const { initGraphQLCLient, sendGRAPHQLRequest } = require("./utils");
+const { initGraphQLCLient, sendGRAPHQLRequest } = require("../utils");
 
 const fs = require("fs");
-const { initClient, insertPlayerIntoDB } = require("./database");
+const { initClient, insertPlayerIntoDB } = require("../database");
 
 const MY_EMAIL = "mouradianvictor@gmail.com";
 const MY_PASS = "Redsox46Mm!!";
-
 
 async function returnCleanData(data) {
   const clean = data.nbaTeam;
@@ -20,7 +19,7 @@ async function returnCleanData(data) {
       team: clean.name,
       slug: player.slug,
       id: player.id,
-      displayName: player.firstName + ' ' + player.lastName,
+      displayName: player.firstName + " " + player.lastName,
       firstName: player.firstName,
       lastName: player.lastName,
       shirtNumber: player.shirtNumber,
@@ -35,7 +34,6 @@ async function returnCleanData(data) {
 }
 
 async function getPlayersFromTeam(nba_client, teamslug) {
-
   const data = await sendGRAPHQLRequest(
     nba_client,
     { slug: teamslug },
@@ -51,7 +49,7 @@ async function getPlayersFromTeam(nba_client, teamslug) {
 const MAX_LIMIT = 1;
 
 async function getAllPlayersFromAllTeams(client) {
-  const teams = fs.readFileSync("../TEAM_SLUGS.txt", "utf8");
+  const teams = fs.readFileSync("./TEAM_SLUGS.txt", "utf8");
   const teams_slugs = teams.split("\n");
   const [nba_client, slug] = await initGraphQLCLient(
     "https://api.sorare.com/sports/graphql",
@@ -60,10 +58,10 @@ async function getAllPlayersFromAllTeams(client) {
   );
 
   for (let team_slug of teams_slugs) {
-    team_slug = team_slug.trim()
+    team_slug = team_slug.trim();
     const data = await getPlayersFromTeam(nba_client, team_slug);
     if (data === null) continue;
-    const insertPlayer= (player) => {
+    const insertPlayer = (player) => {
       const goodplayer = {
         team: player.team,
         slug: player.slug,
@@ -71,10 +69,9 @@ async function getAllPlayersFromAllTeams(client) {
         positions: player.positions,
         avgScore: player.tenGameAverage,
         avatarURL: player.avatarImageUrl,
-      }
-      console.log(goodplayer)
-      insertPlayerIntoDB(client,goodplayer);
-    }
+      };
+      insertPlayerIntoDB(client, goodplayer);
+    };
     data.players.forEach(insertPlayer);
   }
 }

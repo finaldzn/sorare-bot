@@ -161,5 +161,5 @@ module.exports = {
   getPlayerInfoQuery,
   getTokenInfo,
   getNBAPlayersFromTeamSlug,
-  getAllNBACards
+  getAllNBACards,
 };

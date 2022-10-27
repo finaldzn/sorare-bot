@@ -1,13 +1,28 @@
 const { getAllNBACards } = require("../scripts/constant_query");
 const { initGraphQLCLient, sendGRAPHQLRequest } = require("../utils");
 const { insertCard, updateOrCreateCard, createTable } = require("../database");
-const { ActionCable } = require('@sorare/actioncable');
+const { ActionCable } = require("@sorare/actioncable");
+const { createReadStream } = require("fs");
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-
+function getRarityFromCardSlug(slug) {
+  if(slug.includes("rare")) {
+    return "rare";
+  }
+  if(slug.includes("limited")) {
+    return "limited";
+  }
+  if(slug.includes("super_rare")) {
+    return "super_rare";
+  }
+  if(slug.includes("unique")) {
+    return "unique";
+  }
+  return ""
+}
 
 async function getAllCards(client) {
   const [graphClient, slug] = await initGraphQLCLient(
@@ -21,7 +36,6 @@ async function getAllCards(client) {
   let cursor = null;
   let i = 0;
   do {
-    console.log("Page starting from cursor", cursor);
     if (i > 50) {
       console.log("sleeping for a minute");
       await sleep(1000 * 60);
@@ -40,9 +54,11 @@ async function getAllCards(client) {
       if (!card.latestEnglishAuction) {
         continue;
       }
-      console.log(card);
       if (card.latestEnglishAuction.bestBid) {
-        await insertCard(client, card);
+        await insertCard(client, {
+          ...card,
+          rarity: getRarityFromCardSlug(card.slug),
+        });
       } else {
         await insertCard(client, {
           ...card,
@@ -55,6 +71,7 @@ async function getAllCards(client) {
               },
             },
           },
+          rarity: getRarityFromCardSlug(card.slug),
         });
       }
     }
@@ -68,8 +85,10 @@ async function getAllCards(client) {
 
 const tokenAuctionWasUpdated = `tokenAuctionWasUpdated(sports: [NBA]) {
     open
+    startDate
     endDate
     currentPrice
+    bidsCount
     bestBid {
       amount
       amountInFiat {
@@ -78,6 +97,7 @@ const tokenAuctionWasUpdated = `tokenAuctionWasUpdated(sports: [NBA]) {
     }
     nfts {
       slug
+      name
       metadata {
         ... on TokenCardMetadataInterface {
           playerSlug
@@ -88,46 +108,61 @@ const tokenAuctionWasUpdated = `tokenAuctionWasUpdated(sports: [NBA]) {
     }
   }
   `;
-  
-  
-  
-  function createSubscription(client, authorization){
-      const cable = new ActionCable({
-          headers: {
-            'Authorization': `Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI3NzgxMGI1My0yZjgwLTQ3OTEtOWMzYy00OTBhNWU0MjcxMDMiLCJzY3AiOiJ1c2VyIiwiYXVkIjoidG90d3NvcmFyZSIsImlhdCI6MTY2NjU0NzAyOSwiZXhwIjoiMTY2OTEzOTAyOSIsImp0aSI6IjNlODFkMmU4LWQ4ZDMtNDIxNy04OTIzLWY3NjQyN2U0ZDlmNSJ9.MyvMSFb3l1PiUv2ECYDdfd3Ze_D4Cb_Fu-Jec8N2JUY`,
-            // 'APIKEY': '<YourOptionalAPIKey>'
-          }
-        });
-      cable.subscribe(tokenAuctionWasUpdated, {
-          connected() {
-              console.log("connected");
-          },
-          
-          disconnected(error) {
-              console.log("disconnected", error);
-          },
-          
-          rejected(error) {
-              console.log("rejected", error);
-          },
-          
-          received(data) {
-              if (data?.result?.errors?.length > 0) {
-              console.log('error', data?.result?.errors);
-              return;
+
+function createSubscription(client, authorization) {
+  const cable = new ActionCable({
+    headers: {
+      Authorization: `Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI3NzgxMGI1My0yZjgwLTQ3OTEtOWMzYy00OTBhNWU0MjcxMDMiLCJzY3AiOiJ1c2VyIiwiYXVkIjoidG90d3NvcmFyZSIsImlhdCI6MTY2NjU0NzAyOSwiZXhwIjoiMTY2OTEzOTAyOSIsImp0aSI6IjNlODFkMmU4LWQ4ZDMtNDIxNy04OTIzLWY3NjQyN2U0ZDlmNSJ9.MyvMSFb3l1PiUv2ECYDdfd3Ze_D4Cb_Fu-Jec8N2JUY`,
+      // 'APIKEY': '<YourOptionalAPIKey>'
+    },
+  });
+  cable.subscribe(tokenAuctionWasUpdated, {
+    received(data) {
+      console.log("received data");
+      if (data?.result?.errors?.length > 0) {
+        console.log("error", data?.result?.errors);
+        return;
+      }
+      const tokenOffer = data?.result?.data;
+      if (tokenOffer.tokenAuctionWasUpdated) {
+        const returnProperFormat = (data) => {
+          if (!data.bestBid){
+            data.bestBid = {
+              amount: 0,
+              amountInFiat: {
+                usd: 0
               }
-              const tokenOffer = data?.result?.data;
-              if(tokenOffer.latestEnglishAuction){
-              updateOrCreateCard(client, tokenOffer);
-              } else {
-                console.log(tokenOffer)
-              }
-              console.log('a token auction was updated', tokenOffer);
+            }
           }
-      });
-  }
+          return {
+            slug: data.nfts[0].slug,
+            name: data.nfts[0].name,
+            latestEnglishAuction: {
+              bestBid: {
+                amount: data.bestBid.amount,
+                amountInFiat: {
+                  usd: data.bestBid.amountInFiat.usd,
+                },
+              },
+              startDate: data.startDate,
+              endDate: data.endDate,
+              bidCount: data.bidsCount,
+              open: data.open,
+              rarity: data.nfts[0].metadata.rarity,
+            },
+          };
+        };
+
+        updateOrCreateCard(
+          client,
+          returnProperFormat(tokenOffer.tokenAuctionWasUpdated)
+        );
+      }
+    },
+  });
+}
 
 module.exports = {
-    getAllCards,
-    createSubscription
-} ;
+  getAllCards,
+  createSubscription,
+};
