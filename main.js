@@ -4,7 +4,7 @@ const getAllPlayersFromAllTeams = require("./nba/players");
 
 async function main() {
   const client = initClient(
-    "postgres://postgres:mysecretpassword@localhost:5432/postgres?sslmode=disable"
+    process.env.DB
   );
   //   console.log("Getting Players");
   await getAllPlayersFromAllTeams(client);
