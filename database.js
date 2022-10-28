@@ -8,9 +8,23 @@ function initClient(dsn) {
 }
 
 function insertPlayerIntoDB(client, player) {
+  const query = {
+      text: 'INSERT INTO nbaplayers (team, slug, name, positions, avgscore, avatarurl) VALUES ($1, $2, $3, $4, $5, $6)',
+      values: [player.team, player.slug, player.name, player.positions, player.avgScore, player.avatarURL],
+  }
+  client.query(query, err => {
+      if (err) {
+        console.error('connection error', err.stack)
+      } else {
+        console.log('connected')
+      }
+    })
+}
+
+function updatePlayerIntoDB(client, player) {
     const query = {
-        text: 'INSERT INTO nbaplayers (team, slug, name, positions, avgscore, avatarurl) VALUES ($1, $2, $3, $4, $5, $6)',
-        values: [player.team, player.slug, player.name, player.positions, player.avgScore, player.avatarURL],
+        text: 'UPDATE nbaplayers SET avgscore=$1 where slug = $2',
+        values: [player.avgScore,player.slug],
     }
     client.query(query, err => {
         if (err) {
@@ -48,6 +62,13 @@ async function doesCardExist(client, slug) {
   return query.rowCount > 0;
 }
 
+async function doesPlayerExist(client, slug) {
+  const query = await client.query(
+    `SELECT * FROM nbaplayers WHERE slug = '${slug}'`
+  );
+  return query.rowCount > 0;
+}
+
 async function insertCard(client, card) {
   const getPlayerSlugFromCardSlug = (slug) => {
     return slug.split("-").slice(0, -3).join("-");
@@ -77,7 +98,6 @@ async function updateOrCreateCard(client, card) {
   const getPlayerSlugFromCardSlug = (slug) => {
     return slug.split("-").slice(0, -3).join("-");
   };
-  console.log("updating a card");
   if (await doesCardExist(client, card.slug)) {
     client.query(
       `UPDATE cards SET lastBid = $1, lastBidInUSD = $2, startDate = $3, endDate = $4, bidsCount = $5, player = $6, updatedat=$7, open=$8, rarity=$9 WHERE slug = $10`,
@@ -120,9 +140,10 @@ async function updateOrCreateCard(client, card) {
 
 module.exports = {
     initClient,
-    insertPlayerIntoDB,
+    updatePlayerIntoDB,
     insertCard,
     createTable,
-    updateOrCreateCard
-
+    updateOrCreateCard,
+    doesPlayerExist,
+    insertPlayerIntoDB
 }

@@ -6,7 +6,7 @@ async function main() {
   const client = initClient(
     process.env.DB
   );
-  //   console.log("Getting Players");
+  console.log("Getting Players");
   await getAllPlayersFromAllTeams(client);
   console.log("Setting subscriptions");
   createSubscription(client);

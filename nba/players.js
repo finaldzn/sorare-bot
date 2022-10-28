@@ -3,7 +3,7 @@ const { getNBAPlayersFromTeamSlug } = require("../scripts/constant_query");
 const { initGraphQLCLient, sendGRAPHQLRequest } = require("../utils");
 
 const fs = require("fs");
-const { initClient, insertPlayerIntoDB } = require("../database");
+const { initClient, insertPlayerIntoDB, updatePlayerIntoDB } = require("../database");
 
 const MY_EMAIL = "mouradianvictor@gmail.com";
 const MY_PASS = "Redsox46Mm!!";
@@ -70,7 +70,7 @@ async function getAllPlayersFromAllTeams(client) {
         avgScore: player.tenGameAverage,
         avatarURL: player.avatarImageUrl,
       };
-      insertPlayerIntoDB(client, goodplayer);
+      updatePlayerIntoDB(client, goodplayer);
     };
     data.players.forEach(insertPlayer);
   }

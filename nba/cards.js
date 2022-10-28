@@ -1,6 +1,12 @@
 const { getAllNBACards } = require("../scripts/constant_query");
 const { initGraphQLCLient, sendGRAPHQLRequest } = require("../utils");
-const { insertCard, updateOrCreateCard, createTable } = require("../database");
+const {
+  insertCard,
+  updateOrCreateCard,
+  createTable,
+  insertPlayerIntoDB,
+  doesPlayerExist,
+} = require("../database");
 const { ActionCable } = require("@sorare/actioncable");
 const { createReadStream } = require("fs");
 
@@ -9,19 +15,19 @@ function sleep(ms) {
 }
 
 function getRarityFromCardSlug(slug) {
-  if(slug.includes("rare")) {
+  if (slug.includes("rare")) {
     return "rare";
   }
-  if(slug.includes("limited")) {
+  if (slug.includes("limited")) {
     return "limited";
   }
-  if(slug.includes("super_rare")) {
+  if (slug.includes("super_rare")) {
     return "super_rare";
   }
-  if(slug.includes("unique")) {
+  if (slug.includes("unique")) {
     return "unique";
   }
-  return ""
+  return "";
 }
 
 async function getAllCards(client) {
@@ -54,25 +60,38 @@ async function getAllCards(client) {
       if (!card.latestEnglishAuction) {
         continue;
       }
-      if (card.latestEnglishAuction.bestBid) {
-        await insertCard(client, {
-          ...card,
-          rarity: getRarityFromCardSlug(card.slug),
-        });
+      playerExists = await doesPlayerExist(client, card.metadata.playerSlug);
+      if (!playerExists) {
+        const goodplayer = {
+          team: card.metadata.teamSlug,
+          slug: card.metadata.playerSlug,
+          name: card.metadata.playerDisplayName,
+          positions: {},
+          avgScore: 0,
+          avatarURL: "",
+        };
+        await insertPlayerIntoDB(client, goodplayer);
       } else {
-        await insertCard(client, {
-          ...card,
-          latestEnglishAuction: {
-            ...card.latestEnglishAuction,
-            bestBid: {
-              amount: 0,
-              amountInFiat: {
-                usd: 0,
+        if (card.latestEnglishAuction.bestBid) {
+          await insertCard(client, {
+            ...card,
+            rarity: getRarityFromCardSlug(card.slug),
+          });
+        } else {
+          await insertCard(client, {
+            ...card,
+            latestEnglishAuction: {
+              ...card.latestEnglishAuction,
+              bestBid: {
+                amount: 0,
+                amountInFiat: {
+                  usd: 0,
+                },
               },
             },
-          },
-          rarity: getRarityFromCardSlug(card.slug),
-        });
+            rarity: getRarityFromCardSlug(card.slug),
+          });
+        }
       }
     }
     cursor = data["tokens"]["allNfts"]["pageInfo"]["endCursor"];
@@ -118,7 +137,6 @@ function createSubscription(client, authorization) {
   });
   cable.subscribe(tokenAuctionWasUpdated, {
     received(data) {
-      console.log("received data");
       if (data?.result?.errors?.length > 0) {
         console.log("error", data?.result?.errors);
         return;
@@ -126,13 +144,14 @@ function createSubscription(client, authorization) {
       const tokenOffer = data?.result?.data;
       if (tokenOffer.tokenAuctionWasUpdated) {
         const returnProperFormat = (data) => {
-          if (!data.bestBid){
+          if (data.bestBid.amount === undefined) {
+            console.log("undefined");
             data.bestBid = {
               amount: 0,
               amountInFiat: {
-                usd: 0
-              }
-            }
+                usd: 0,
+              },
+            };
           }
           return {
             slug: data.nfts[0].slug,
@@ -152,6 +171,7 @@ function createSubscription(client, authorization) {
             },
           };
         };
+        console.log("updating card for player", tokenOffer.tokenAuctionWasUpdated.nfts[0].metadata.playerSlug);
 
         updateOrCreateCard(
           client,

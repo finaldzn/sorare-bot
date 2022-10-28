@@ -125,32 +125,40 @@ const getNBAPlayersFromTeamSlug = gql`
 `;
 
 const getAllNBACards = gql`
-  query getAllnfts($cursor: String) {
-    tokens {
-      allNfts(sport: NBA, after: $cursor) {
-        nodes {
-          latestEnglishAuction {
-            bestBid {
-              amount
-              amountInFiat {
-                usd
-              }
+query getAllnfts($cursor: String) {
+  tokens {
+    allNfts(sport: NBA, after: $cursor) {
+      nodes {
+        latestEnglishAuction {
+          bestBid {
+            amount
+            amountInFiat {
+              usd
             }
-            startDate
-            open
-            bidsCount
-            endDate
           }
-          name
-          slug
+          startDate
+          open
+          bidsCount
+          endDate
         }
-        pageInfo {
-          hasNextPage
-          endCursor
-        }
+        name
+        slug
+        metadata{
+          ... on TokenCardMetadataInterface{
+            playerSlug
+            playerDisplayName
+            teamSlug
+          }
+        
+      }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
       }
     }
   }
+}
 `;
 
 module.exports = {
